@@ -1,0 +1,3 @@
+[submodule "external/libaddressinput"]
+	path = external/libaddressinput
+	url = https://github.com/google/libaddressinput
