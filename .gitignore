@@ -1,2 +1,7 @@
 build
 compile_commands.json
+.nyc_output
+.cache
+node_modules
+dist
+lib

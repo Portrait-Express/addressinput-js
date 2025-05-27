@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <memory>
 #include <sstream>
 #include <vector>
 
@@ -124,7 +125,7 @@ get_value_from_napi<std::vector<std::string>>(
 }
 
 #define ASSIGN_READ(env, dest, val, type, prop)\
-    dest.prop = get_value_from_napi<type>(env, val.Get(STR(prop)), STR(prop));
+    (dest).prop = get_value_from_napi<type>(env, val.Get(STR(prop)), STR(prop));
 
 
 template<>
@@ -151,6 +152,35 @@ get_value_from_napi<i18n::addressinput::AddressData>(
 
     return data;
 }
+
+
+template<>
+std::shared_ptr<i18n::addressinput::AddressData>
+get_value_from_napi<std::shared_ptr<i18n::addressinput::AddressData>>(
+        Napi::Env env, 
+        Napi::Value val, 
+        std::string name) {
+    assert_typeof(env, name, val, napi_valuetype::napi_object);
+
+    std::shared_ptr<i18n::addressinput::AddressData> ptr = 
+        std::make_shared<i18n::addressinput::AddressData>();
+
+    Napi::Object obj = val.ToObject();
+
+    ASSIGN_READ(env, *ptr, obj, std::string, region_code);
+    ASSIGN_READ(env, *ptr, obj, std::vector<std::string>, address_line);
+    ASSIGN_READ(env, *ptr, obj, std::string, administrative_area);
+    ASSIGN_READ(env, *ptr, obj, std::string, locality);
+    ASSIGN_READ(env, *ptr, obj, std::string, dependent_locality);
+    ASSIGN_READ(env, *ptr, obj, std::string, postal_code);
+    ASSIGN_READ(env, *ptr, obj, std::string, sorting_code);
+    ASSIGN_READ(env, *ptr, obj, std::string, language_code);
+    ASSIGN_READ(env, *ptr, obj, std::string, organization);
+    ASSIGN_READ(env, *ptr, obj, std::string, recipient);
+
+    return ptr;
+}
+
 
 i18n::addressinput::AddressProblem strtoprob(Napi::Env env, const std::string& str) {
     if(str == "UNEXPECTED_FIELD") {
@@ -268,12 +298,15 @@ Napi::Value to_napi_value(Napi::Env env, const i18n::addressinput::FieldProblemM
     Napi::Object retval = Napi::Object::New(env);
 
     for(auto set : problems) {
-        if(!retval.Has(set.first)) {
-            retval.Set(set.first, Napi::Array::New(env));
-        }
         std::stringstream ss;
         ss << set.first; //Serialize AddressField
-        Napi::Array arr = retval.Get(ss.str()).As<Napi::Array>();
+        std::string strKey = ss.str();
+
+        if(!retval.Has(strKey)) {
+            retval.Set(strKey, Napi::Array::New(env));
+        }
+
+        Napi::Array arr = retval.Get(strKey).As<Napi::Array>();
         Napi::Value func = arr.Get("push");
         assert_typeof(env, "push", func, napi_valuetype::napi_function);
         func.As<Napi::Function>().Call(arr, {to_napi_value(env, set.second)});
@@ -317,7 +350,7 @@ Napi::Value to_napi_value(
         const std::pair<
             const i18n::addressinput::AddressData&, 
             const i18n::addressinput::FieldProblemMap&>& pair) {
-    Napi::Array arr;
+    Napi::Array arr = Napi::Array::New(env);
     Napi::Value func = arr.Get("push");
     assert_typeof(env, "push", func, napi_valuetype::napi_function);
     auto push = func.As<Napi::Function>();
@@ -340,34 +373,30 @@ void then(Napi::Promise promise, std::function<void (const Napi::CallbackInfo&)>
 
 void handle_get_result(Napi::Env env, const std::string& key, Napi::Value result, const i18n::addressinput::Source::Callback& data_ready) {
     auto cb = [&data_ready, key](Napi::Value v) {
-        try {
-            if(v.IsString()) {
-                std::string *data = new std::string(v.ToString().Utf8Value());
-                data_ready(true, key, data);
-            } else if(v.IsNull()) {
-                data_ready(false, key, nullptr);
-            } else {
-                throw unexpected_type_exception(
-                        v.Env(), "storage_get_result", napi_valuetype::napi_string, v.Type());
-            }
-        } catch(Napi::Error& err) {
+        if(v.IsString()) {
+            std::string *data = new std::string(v.ToString().Utf8Value());
+            data_ready(true, key, data);
+        //} else if(v.IsNull()) {
+        //    data_ready(false, key, nullptr);
+        } else {
             data_ready(false, key, nullptr);
-            throw;
+            //throw unexpected_type_exception(
+            //        v.Env(), "storage_get_result", napi_valuetype::napi_string, v.Type());
         }
     };
 
     if(result.IsPromise()) {
         auto promise = result.As<Napi::Promise>();
-        then(promise, [&cb](const Napi::CallbackInfo& info) {
+        then(promise, [&data_ready, key, cb](const Napi::CallbackInfo& info) {
             if(info.Length() <= 0 || info[0].IsNull() || info[0].IsUndefined()) {
-                throw unexpected_type_exception(info.Env(), "Expected promise to return a value");
+                data_ready(false, key, nullptr);
+            } else {
+                cb(info[0]);
             }
-
-            cb(info[0]);
         });
+    } else {
+        cb(result);
     }
-
-    cb(result);
 }
 
 void i18n::addressinput::JsDelegatedSource::Get(const std::string& key, const Callback& data_ready) const {
@@ -377,8 +406,8 @@ void i18n::addressinput::JsDelegatedSource::Get(const std::string& key, const Ca
         auto result = _get->Call({Napi::String::New(_get->Env(), key)});
         handle_get_result(_get->Env(), key, result, data_ready);
     } catch(Napi::Error& err) {
+        //TODO - figure out a way to propagate this error message....
         data_ready(false, key, nullptr);
-        throw;
     }
 }
 
@@ -393,8 +422,8 @@ void i18n::addressinput::JsDelegatedStorage::Get(const std::string& key, const C
         auto result = _get->Call({Napi::String::New(_get->Env(), key)});
         handle_get_result(_get->Env(), key, result, data_ready);
     } catch(Napi::Error& err) {
+        //TODO - figure out a way to propagate this error message....
         data_ready(false, key, nullptr);
-        throw;
     }
 }
 
@@ -447,14 +476,23 @@ JsAddressValidator::JsAddressValidator(const Napi::CallbackInfo& info)
     if(!source.IsUndefined()) {
         assert_typeof(info.Env(), "request", source, napi_valuetype::napi_function);
         _source->SetAcquisition(source.As<Napi::Function>());
+    } else {
+        throw Napi::Error::New(info.Env(), 
+                "'request' must be specified when instantiating the validator.");
     }
+
     if(!cache.IsUndefined()) {
         assert_typeof(info.Env(), "put", cache, napi_valuetype::napi_function);
         _storage->SetStore(cache.As<Napi::Function>());
+    } else {
+        throw Napi::Error::New(info.Env(), "'put' must be specified when instantiating the validator.");
     }
+
     if(!retrieve.IsUndefined()) {
         assert_typeof(info.Env(), "get", retrieve, napi_valuetype::napi_function);
         _storage->SetAcquisition(retrieve.As<Napi::Function>());
+    } else {
+        throw Napi::Error::New(info.Env(), "'get' must be specified when instantiating the validator.");
     }
 }
 
@@ -477,6 +515,49 @@ Napi::Object JsAddressValidator::Init(Napi::Env env, Napi::Object exports) {
 using ValidateCallback = FunctionCallbackWrapper<
     const i18n::addressinput::AddressData&, const i18n::addressinput::FieldProblemMap&>;
 
+std::ostream& operator<<(std::ostream& os, const i18n::addressinput::FieldProblemMap& problems) {
+    if(problems.size() <= 0) 
+        os << "No Elements\n";
+
+    for(auto it = problems.begin(); it != problems.end(); it++) {
+        os << it->first << ' ' << it->second << '\n';
+    }
+    return os;
+}
+
+class ValidateCallbackWrapper : public i18n::addressinput::AddressValidator::Callback {
+public:
+    ValidateCallbackWrapper(
+        std::shared_ptr<i18n::addressinput::AddressData> address,
+        std::shared_ptr<i18n::addressinput::FieldProblemMap> problems,
+        std::shared_ptr<i18n::addressinput::FieldProblemMap> filter,
+        Napi::Promise::Deferred defer
+    ) : deferred_(defer), problems(problems), filter(filter), address(address) { }
+
+    void operator()(
+            bool success, 
+            const i18n::addressinput::AddressData& data, 
+            const i18n::addressinput::FieldProblemMap& problems) const override {
+        if(success) {
+            deferred_.Resolve(to_napi_value(deferred_.Env(), std::make_pair(data, problems)));
+        } else {
+            deferred_.Reject(Napi::Error::New(deferred_.Env(), "Validator call failed").Value());
+        }
+        delete this;
+    }
+
+    auto Promise() {
+        return deferred_.Promise();
+    }
+
+    std::shared_ptr<i18n::addressinput::AddressData> address;
+    std::shared_ptr<i18n::addressinput::FieldProblemMap> problems;
+    std::shared_ptr<i18n::addressinput::FieldProblemMap> filter;
+
+private:
+    Napi::Promise::Deferred deferred_;
+};
+
 Napi::Value JsAddressValidator::validate_address(const Napi::CallbackInfo& info) {
     size_t argc = info.Length();
     Napi::Value result;
@@ -485,7 +566,7 @@ Napi::Value JsAddressValidator::validate_address(const Napi::CallbackInfo& info)
         throw unexpected_type_exception(info.Env(), "Expected an object in arguments");
     }
 
-    auto address = get_value_from_napi<i18n::addressinput::AddressData>(info.Env(), info[0], "address");
+    auto address = get_value_from_napi<std::shared_ptr<i18n::addressinput::AddressData>>(info.Env(), info[0], "address");
     auto conf = info[1].ToObject();
 
     auto allow_postal = get_value_from_napi<bool>(info.Env(), conf.Get("allow_postal"), "allow_postal");
@@ -493,23 +574,17 @@ Napi::Value JsAddressValidator::validate_address(const Napi::CallbackInfo& info)
     auto filter = get_value_from_napi<i18n::addressinput::FieldProblemMap>(info.Env(), conf.Get("filter"), "filter");
 
     //Heap allocate filter due to pointer requirement
-    auto filterPtr = std::make_shared<i18n::addressinput::FieldProblemMap>(filter);
-    auto problems = std::make_shared<i18n::addressinput::FieldProblemMap>();
-    auto defer = Napi::Promise::Deferred::New(info.Env());
 
-    ValidateCallback cb{[defer, problems, filterPtr](
-        bool success, 
-        const i18n::addressinput::AddressData& data,
-        const i18n::addressinput::FieldProblemMap& resultProblems
-    ) {
-        if(success) {
-            defer.Resolve(to_napi_value(defer.Env(), std::make_pair(data, resultProblems)));
-        } else {
-            defer.Reject(Napi::Error::New(defer.Env(), "Validator call failed").Value());
-        }
-    }};
+    //Address isnt required as a capture but it needs to live until this callback
+    //is executed so its a cheap workaround
+    ValidateCallbackWrapper *cb = new ValidateCallbackWrapper{
+        address,
+        std::make_shared<i18n::addressinput::FieldProblemMap>(),
+        std::make_shared<i18n::addressinput::FieldProblemMap>(filter),
+        Napi::Promise::Deferred::New(info.Env())
+    };
 
-    _validator.Validate(address, allow_postal, require_name, filterPtr.get(), problems.get(), cb);
+    _validator.Validate(*address, allow_postal, require_name, cb->filter.get(), cb->problems.get(), *cb);
 
-    return defer.Promise();
+    return cb->Promise();
 }

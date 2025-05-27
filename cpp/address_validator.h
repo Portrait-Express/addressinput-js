@@ -9,7 +9,7 @@
 
 #include <libaddressinput/source.h>
 #include <libaddressinput/address_validator.h>
-#include <libaddressinput/preload_supplier.h>
+#include <libaddressinput/ondemand_supplier.h>
 #include <libaddressinput/storage.h>
 
 #define STR(v) _STR(v)
@@ -73,7 +73,7 @@ private:
     
     i18n::addressinput::JsDelegatedSource *_source;
     i18n::addressinput::JsDelegatedStorage *_storage;
-    i18n::addressinput::PreloadSupplier _supplier;
+    i18n::addressinput::OndemandSupplier _supplier;
     i18n::addressinput::AddressValidator _validator;
 };
 

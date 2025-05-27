@@ -4,6 +4,8 @@
 #include <napi.h>
 
 #include <iostream>
+
+#define BOOST_STACKTRACE_USE_BACKTRACE
 #include <boost/stacktrace.hpp>
 
 #ifdef __linux__
@@ -39,6 +41,7 @@ void segvhandler(int code) {
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     std::set_terminate(handler);
     std::signal(SIGSEGV, segvhandler);
+    std::signal(SIGBUS, segvhandler);
     std::signal(SIGABRT, segvhandler);
     return JsAddressValidator::Init(env, exports);
 }

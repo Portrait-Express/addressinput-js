@@ -1,30 +1,30 @@
 {
-  "name": "addressinput-js",
-  "version": "1.0.0",
-  "description": "NodeJS wrapper around google/libaddressinput",
-  "main": "index.js",
-  "type": "module",
-  "devDependencies": {
-    "cmake-js": "^7.3.1",
-    "expect": "^29.7.0",
-    "mocha": "^11.4.0",
-    "node-addon-api": "^8.3.1",
-    "node-gyp": "^11.2.0",
-    "nyc": "^17.1.0",
-    "typescript": "^5.8.3"
-  },
-  "binary": {
-    "napi_versions": [
-      7
-    ]
-  },
-  "scripts": {
-    "build": "cmake-js build && npm run -s copy-libs",
-    "build:debug": "cmake-js build -D && npm run -s copy-libs:debug",
-    "copy-libs": "mkdir -p lib && cp build/Release/addressinput-js.node lib/",
-    "copy-libs:debug": "mkdir -p lib && cp build/Debug/addressinput-js.node lib/",
-    "test": "nyc mocha ./*.test.js"
-  },
-  "author": "Payton Doud, Portrait Express",
-  "license": "ISC"
+    "name": "addressinput-js",
+    "version": "1.0.0",
+    "description": "Runtime dependency-free, NodeJS wrapper around google/libaddressinput",
+    "main": "./dist/index.js",
+    "types": "./types/index.d.ts",
+    "type": "commonjs",
+    "devDependencies": {
+        "cmake-js": "^7.3.1",
+        "expect": "^29.7.0",
+        "mocha": "^11.4.0",
+        "node-addon-api": "^8.3.1",
+        "node-gyp": "^11.2.0",
+        "nyc": "^17.1.0",
+        "typescript": "^5.8.3"
+    },
+    "binary": {
+        "napi_versions": [ 7 ]
+    },
+    "scripts": {
+        "build": "tsc",
+        "build:cpp": "cmake-js build && npm run -s copy-libs",
+        "build:cpp:debug": "cmake-js build -D && npm run -s copy-libs:debug",
+        "copy-libs": "mkdir -p lib && cp build/Release/addressinput-js.node lib/",
+        "copy-libs:debug": "mkdir -p lib && cp build/Debug/addressinput-js.node lib/",
+        "test": "nyc mocha ./test/*.test.js"
+    },
+    "author": "Payton Doud, Portrait Express",
+    "license": "MIT"
 }
