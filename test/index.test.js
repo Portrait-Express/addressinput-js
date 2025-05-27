@@ -2,14 +2,17 @@ const { AddressValidator } = require("../dist/index.js");
 const { expect } = require("expect");
 
 describe("AddressValidator", () => {
+    var cache = {};
+    //Simplest viable implementation
     var validator = new AddressValidator({
         request: async (key) => {
             return await fetch("https://chromium-i18n.appspot.com/ssl-address/" + key).then(v => v.text());
         },
         get: async (key) => {
-            return await fetch("https://chromium-i18n.appspot.com/ssl-address/" + key).then(v => v.text());
+            return cache[key];
         },
         put: (key, val) => {
+            cache[key] = val;
         }
     });
 
@@ -24,4 +27,4 @@ describe("AddressValidator", () => {
         });
         expect(valid[1]).toEqual({POSTAL_CODE: ['MISMATCHING_VALUE']});
     });
-})
+});

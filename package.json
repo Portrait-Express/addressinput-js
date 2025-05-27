@@ -18,7 +18,8 @@
         "napi_versions": [ 7 ]
     },
     "scripts": {
-        "build": "tsc",
+        "build": "npm run -s build:cpp && tsc",
+        "build:debug": "npm run -s build:cpp:debug && tsc",
         "build:cpp": "cmake-js build && npm run -s copy-libs",
         "build:cpp:debug": "cmake-js build -D && npm run -s copy-libs:debug",
         "copy-libs": "mkdir -p lib && cp build/Release/addressinput-js.node lib/",

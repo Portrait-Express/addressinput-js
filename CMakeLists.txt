@@ -8,14 +8,15 @@ project(addressinput-js)
 # libaddressinput
 set(LIBADDRESS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/libaddressinput/cpp")
 include_directories("${LIBADDRESS_DIR}/include" ${CMAKE_JS_INC})
-set(LIBADDR_DEBUG "")
+set(LIBADDRESS_FLAGS "-fPIC")
 if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Release")
-    set(LIBADDR_DEBUG "-DDEBUG=yes")
+    set(LIBADDRESS_FLAGS "${LIBADDRESS_FLAGS} -g -rdynamic")
 endif()
 add_custom_command(
     OUTPUT ${LIBADDRESS_DIR}/out/Default/obj/libaddressinput.a
     COMMAND export GYP_GENERATORS='ninja'
-    COMMAND gyp --depth . -Dcomponent=static_library -DENABLE_FPIC=yes ${LIBADDR_DEBUG}
+    COMMAND export CXXFLAGS='${LIBADDRESS_FLAGS}'
+    COMMAND gyp --depth . -Dcomponent=static_library
     COMMAND ninja -C out/Default
     WORKING_DIRECTORY ${LIBADDRESS_DIR})
 add_custom_target(libaddressinput_build DEPENDS ${LIBADDRESS_DIR}/out/Default/obj/libaddressinput.a)
