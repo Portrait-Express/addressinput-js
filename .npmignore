@@ -1,0 +1,10 @@
+cpp
+external
+test
+CMakeLists.txt
+compile_commands.json
+node_modules
+build
+.nyc_output
+.cache
+.gitmodules
