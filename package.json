@@ -26,6 +26,10 @@
         "copy-libs:debug": "mkdir -p lib && cp build/Debug/addressinput-js.node lib/",
         "test": "nyc mocha ./test/*.test.js"
     },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Portrait-Express/addressinput-js"
+    },
     "author": "Payton Doud, Portrait Express",
     "license": "MIT"
 }
