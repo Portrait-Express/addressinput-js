@@ -1,6 +1,6 @@
 {
     "name": "@portrait-express/addressinput-js",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Runtime dependency-free, NodeJS wrapper around google/libaddressinput",
     "main": "./dist/index.js",
     "types": "./types/index.d.ts",
