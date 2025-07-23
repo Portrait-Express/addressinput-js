@@ -155,4 +155,8 @@ export class AddressValidator {
             Object.assign({}, defaultAddressData, data), 
             Object.assign({}, defaultValidateAddressOpts, opts));
     }
+
+    format(data: Partial<AddressData>) {
+        return this._validator.format(Object.assign({}, defaultAddressData, data));
+    }
 }

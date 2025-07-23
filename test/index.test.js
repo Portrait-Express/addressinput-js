@@ -3,6 +3,7 @@ const { expect } = require("expect");
 
 describe("AddressValidator", () => {
     var cache = {};
+    
     //Simplest viable implementation
     var validator = new AddressValidator({
         request: async (key) => {
@@ -27,4 +28,19 @@ describe("AddressValidator", () => {
         });
         expect(valid[1]).toEqual({POSTAL_CODE: ['MISMATCHING_VALUE']});
     });
+
+    it("should format", async() => {
+        let data = {
+            region_code: 'US',
+            address_line: ['441 n water st'],
+            administrative_area: 'OR',
+            locality: 'Silverton',
+            postal_code: "97381",
+            organization: "Portrait Express",
+        } 
+
+        let str = validator.format(data);
+        
+        expect(str).toEqual("Portrait Express\n441 n water st\nSilverton, OR 97381");
+    })
 });

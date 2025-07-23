@@ -4,8 +4,10 @@
 #include <vector>
 
 #include <libaddressinput/address_data.h>
+#include <libaddressinput/address_formatter.h>
 
 #include "address_validator.h"
+#include "libaddressinput/supplier.h"
 
 std::string get_napi_type_name(Napi::Env env, napi_valuetype type) {
     switch(type) {
@@ -502,7 +504,8 @@ Napi::Object JsAddressValidator::Init(Napi::Env env, Napi::Object exports) {
     Napi::HandleScope scope(env);
 
     auto func = DefineClass(env, "AddressValidator", {
-        InstanceMethod("validate", &JsAddressValidator::validate_address)
+        InstanceMethod("validate", &JsAddressValidator::validate_address),
+        InstanceMethod("format", &JsAddressValidator::format_address)
     });
 
     constructor = Napi::Persistent(func);
@@ -587,4 +590,27 @@ Napi::Value JsAddressValidator::validate_address(const Napi::CallbackInfo& info)
     _validator.Validate(*address, allow_postal, require_name, cb->filter.get(), cb->problems.get(), *cb);
 
     return cb->Promise();
+}
+
+Napi::Value JsAddressValidator::format_address(const Napi::CallbackInfo& info) {
+    size_t argc = info.Length();
+
+    if(info.Length() < 1) {
+        throw unexpected_type_exception(info.Env(), "Expected an object in arguments");
+    }
+
+    auto address = get_value_from_napi<std::shared_ptr<i18n::addressinput::AddressData>>(info.Env(), info[0], "address");
+
+    std::vector<std::string> lines;
+    i18n::addressinput::GetFormattedNationalAddress(*address, &lines);
+
+    std::stringstream ss;
+    for(auto it = lines.begin(); it != lines.end(); it++) {
+        ss << *it;
+        if(it < lines.end() - 1) {
+            ss << '\n';
+        }
+    } 
+
+    return to_napi_value(info.Env(), ss.str());
 }

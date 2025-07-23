@@ -5,7 +5,6 @@
         "target": "ES2016",
         "lib": [ "ES2016" ],
         "noImplicitAny": true,
-        "removeComments": true,
         "preserveConstEnums": true,
         "sourceMap": true,
         "declaration": true,

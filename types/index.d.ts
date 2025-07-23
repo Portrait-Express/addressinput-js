@@ -1,10 +1,25 @@
 export type GetCallback = (key: string) => Promise<string> | string;
 export type PutCallback = (key: string, data: string) => void;
+/**
+ * Options specified when creating a validator
+ */
 export type AddressValidatorOpts = {
+    /**
+     * Callback that requests the data from whatever source is expected
+     */
     request: GetCallback;
+    /**
+     * Callback that gets any data that was previously stored with `put`
+     */
     get: GetCallback;
+    /**
+     * Callback that stores a key's data to cache it for later
+     */
     put: PutCallback;
 };
+/**
+ * Represents an issue with an address field.
+ */
 export declare enum AddressProblem {
     UNEXPECTED_FIELD = "UNEXPECTED_FIELD",
     MISSING_REQUIRED_FIELD = "MISSING_REQUIRED_FIELD",
@@ -14,18 +29,55 @@ export declare enum AddressProblem {
     USES_P_O_BOX = "USES_P_O_BOX",
     UNSUPPORTED_FIELD = "UNSUPPORTED_FIELD"
 }
+/**
+ * The address's full data object
+ */
 export type AddressData = {
+    /**
+     * The country of the address. Always expected, and should be the ISO 3166-2 character code.
+     */
     region_code: string;
+    /**
+     * The street address lines of the address
+     */
     address_line: string[];
+    /**
+     * The administrative area, state or province in the country. Likely expects abbreviation
+     * as well. Check data source.
+     */
     administrative_area: string;
+    /**
+     * The address's full data object
+     */
     locality: string;
+    /**
+     * The locality, or city for the address
+     */
     dependent_locality: string;
+    /**
+     * Zip/Postal code
+     */
     postal_code: string;
+    /**
+     * Additional sorting code
+     */
     sorting_code: string;
+    /**
+     * Language for the address
+     */
     language_code: string;
+    /**
+     * Organization the address represents
+     */
     organization: string;
+    /**
+     * The recipient name
+     */
     recipient: string;
 };
+/**
+ * A map of issues to each field for the address
+ */
 export type FieldProblemMap = {
     COUNTRY?: AddressProblem[];
     ADMIN_AREA?: AddressProblem[];
@@ -42,8 +94,19 @@ export type ValidateAddressOpts = {
     require_name?: boolean;
     filter?: FieldProblemMap;
 };
+/**
+ * Class to represent a validator instance.
+ */
 export declare class AddressValidator {
     private _validator;
     constructor(opts: AddressValidatorOpts);
+    /**
+     * Validate an address object, and find issues
+     *
+     * @param {Partial<AddressData>} data The address object
+     * @param {ValidateAddressOpts} [opts] Additional options for this validation
+     * @returns {Promise<[AddressData, FieldProblemMap]>} Tuple of [validated address, problem map]
+     */
     validate(data: Partial<AddressData>, opts?: ValidateAddressOpts): Promise<[AddressData, FieldProblemMap]>;
+    format(data: Partial<AddressData>): any;
 }

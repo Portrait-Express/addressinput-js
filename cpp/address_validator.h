@@ -67,6 +67,7 @@ public:
     static Napi::Object Init(Napi::Env, Napi::Object exports);
 
     Napi::Value validate_address(const Napi::CallbackInfo& info);
+    Napi::Value format_address(const Napi::CallbackInfo& info);
 
 private:
     static Napi::FunctionReference constructor;
